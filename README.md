@@ -39,3 +39,5 @@
 * [Beanstalk](http://kr.github.io/beanstalkd/)
 * [RabbitMQ](http://www.rabbitmq.com/getstarted.html)
 * [Redis](http://redis.io/)
+
+For more queue alternatives, See [Queues](http://queues.io/)
