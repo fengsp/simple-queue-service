@@ -41,7 +41,7 @@ Considering a REST service as followings:<br/>
 ##MQ
 * [ZeroMQ](http://zeromq.org/)
 * [Kestrel](http://robey.github.io/kestrel/)
-* [NSQ](https://github.com/bitly/nsq)
+* [NSQ](https://github.com/bitly/nsq) (Chosen)
 * [RestMQ](http://restmq.com/)
 * [Darner](https://github.com/wavii/darner)
 * [Beanstalk](http://kr.github.io/beanstalkd/)
