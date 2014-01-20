@@ -20,6 +20,14 @@
 * mPush ?
 * mGet ?
 
+Considering a REST service as followings:<br/>
+
+1. Any queue can be accessed as /app/queue/.
+2. GET request dequeues an object.
+3. POST request inserts an object.
+4. DELETE request drops an object.
+
+
 ##Dashboard
 * listApps
 * listQueues
