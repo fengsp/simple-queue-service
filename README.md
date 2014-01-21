@@ -14,10 +14,10 @@
 
 ##Apis
 * createQueue
-* Push
+* Put
 * Get
 * Delete
-* mPush ?
+* mPut ?
 * mGet ?
 
 Considering a REST service as followings:<br/>
@@ -40,12 +40,12 @@ Considering a REST service as followings:<br/>
 
 ##MQ
 * [ZeroMQ](http://zeromq.org/)
-* [Kestrel](http://robey.github.io/kestrel/)
-* [NSQ](https://github.com/bitly/nsq) (Chosen)
+* [Kestrel](http://robey.github.io/kestrel/) (Chosen)(Scala)
+* [NSQ](https://github.com/bitly/nsq) (Good)(Go)
 * [RestMQ](http://restmq.com/)
 * [Darner](https://github.com/wavii/darner)
 * [Beanstalk](http://kr.github.io/beanstalkd/)
 * [RabbitMQ](http://www.rabbitmq.com/getstarted.html)
-* [Redis](http://redis.io/)
+* [Redis](http://redis.io/) (Simple)
 
 For more queue alternatives, See [Queues](http://queues.io/)
