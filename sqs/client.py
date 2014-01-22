@@ -33,6 +33,10 @@ class Kestrel(object):
     DEFAULT_SERVERS = ['127.0.0.1:22133']
 
     def __init__(self, app=None):
+        """Init the kestrel ext.
+
+        :param app: The Flask app.
+        """
         self.app = app
         self.__memcache = None
 
@@ -76,8 +80,229 @@ class Kestrel(object):
     def connect(self):
         """Connect to the kestrel server. So basiclly you have to explicitly 
         connect before using the client."""
+        self.__memcache = KestrelMemcacheClient(servers=self.servers)
         return self
+
+    def get(self, queue, timeout=None):
+        """Get a msg off the specific queue.
+
+        :param queue: The queue you want to dequeue
+        :param timeout: The time to wait for a msg if none are on the queue.
+            (milliseconds)
+        :return: The msg
+        """
+        cmd = '%s' % queue
+        if timeout is not None:
+            cmd = '%s/t=%d' % (cmd, timeout)
+        return self.__memcache.get('%s' % cmd)
+        
+    def put(self, queue, data, expire=None):
+        """Put a msg into the specific queue.
+
+        :param queue: The queue you want to enqueue
+        :param data: The msg
+        :param expire: The expiration time of the msg
+        :return: `True` or `False`
+        """
+        if expire is None:
+            expire = 0
+
+        ret = self.__memcache.set(queue, data, expire)
+
+        if ret == 0:
+            return False
+        return False
+
+    def delete(self, queue):
+        """Delete the specific queue from the kestrel server
+
+        :return `True` or `False`
+        """
+        ret = self.__memcache.delete(queue)
+        if ret == 0:
+            return False
+        return True
+
+    def next(self, queue, timeout=None):
+        """Get a msg off the specific queue (Reliable)
+
+        :param queue: The queue you want to dequeue
+        :param timeout: The time to wait for a msg if none are on the queue.
+            (milliseconds)
+        :return: The msg
+        """
+        cmd = '%s/close' % queue
+        if timeout is not None:
+            cmd = '%s/t=%d' % (cmd, timeout)
+        return self.__memcache.get('%s/open' % cmd)
+
+    def peek(self, queue, timeout=None):
+        """return the first available item from the specific queue, but not 
+        remove it
+
+        :param queue: The queue you want to have a peek
+        :param timeout: The time to wait for a msg if none are on the queue.
+            (milliseconds)
+        :return: The msg
+        """
+        cmd = '%s/peek' % queue
+        if timeout is not None:
+            cmd = '%s/t=%d' % (cmd, timeout)
+        return self.__memcache.get(cmd)
+
+    def abort(self, queue):
+        """Abort a read
+
+        :param queue: The queue you want to abort
+        :return: `True`
+        """
+        self.__memcache.get('%s/abort' % queue)
+        return True
+
+    def finish(self, queue):
+        """Close a open request on one specific queue
+
+        :param queue: The queue you want to close the open request
+        :return: `True`
+        """
+        self.__memcache.get('%s/close' % queue)
+        return True
+    
+    def flush(self, queue):
+        """Discard all msgs remaining in the specific queue
+
+        :param queue: The queue you want to clear out
+        :return: `True`
+        """
+        self.__memcache.flush(queue)
+        return True
+
+    def flush_all(self):
+        """Discard all msgs remaining in all queues
+
+        :return: `True`
+        """
+        self.__memcache.flush_all()
+        return True
+
+    def reload(self):
+        """Reload the config file and reconfigure all queues
+
+        :return: `True`
+        """
+        self.__memcache.reload()
+        return True
+
+    def raw_stats(self, dump=False):
+        """Get raw stats
+
+        :param dump: Set to `True` to get `DUMP_STATS` COMMAND result, so you
+                     can get server stats in a more readable style. Default to                      `False` to get `STATS` COMMAND result, and you get server 
+                     stats i memcache style
+        :return: The raw stats
+        """
+        if dump is True:
+            return self.__memcache.dump_stats()
+        return self.__memcache.get_stats()
+
+    def stats(self):
+        """Get server stats (Python dict)
+
+        :return: The server stats dict
+        """
+        server = None
+        s_stats = {}
+        q_stats = {}
+
+        for server, stats in self.raw_stats():
+            server = server.split(' ', 1)[0]
+            for name, stat in stats.iteritems():
+                if not name.startswith('queue_'):
+                    try:
+                        s_stats[name] = long(stat)
+                    except ValueError:
+                        s_stats[name] = stat
+        
+        for name, stats in re.findall(
+                           r'queue \'(?P<name>.*?)\' \{(?P<stats>.*?)\}', 
+                           self.raw_stats(True), re.DOTALL):
+            _stats = {}
+            for stat in [stat.strip() for stat in stats.split('\n')]:
+                if stat.count('='):
+                    key, value = stat.split('=')
+                    _stats[key] = long(value)
+            q_stats[name] = _stats
+
+        if server is None:
+            return {}
+        return dict([('server', s_stats), ('queues', q_stats)])
+
+    def shutdown(self):
+        """Cleanly shutdown the server and exit
+        """
+        self.__memcache.shutdown()
+
+    def version(self):
+        """Get the version of the kestrel server
+
+        :return: The kestrel server version
+        """
+        return self.__memcache.version()
 
     def close(self):
         """Just close the connection."""
-        pass
+        self.__memcache.disconnect_all()
+        return True
+
+
+def KestrelMemcacheCilent(memcache.Client):
+    """Kestrel Memcache Client.
+
+    Adding commands: RELOAD, FLUSH, DUMP_STATS, SHUTDOWN, VERSION
+    """
+
+    def reload(self):
+        for s in self.servers:
+            if not s.connect(): continue
+            s.send_cmd('RELOAD')
+            s.expect('OK')
+
+    def flush(self, key):
+        for s in self.servers:
+            if not s.connect(): continue
+            s.send_cmd('FLUSH %s' % (key))
+            s.expect('OK')
+
+    def dump_stats(self):
+        return self.__read_cmd('DUMP_STATS')
+
+    def shutdown(self):
+        for s in self.servers:
+            if not s.connect(): continue
+            s.send_cmd('SHUTDOWN')
+
+    def version(self):
+        data = []
+        for s in self.servers:
+            if not s.connect(): continue
+            s.send_cmd('VERSION')
+            data.append(s.readline())
+
+        return '\n'.join(data).split(' ', 1)[1]
+
+    def __read_cmd(self, cmd):
+        data = []
+        for s in self.servers:
+            if not s.connect(): continue
+            s.send_cmd(cmd)
+            data.append(self.__read_string(s))
+
+        return '\n'.join(data)
+
+    def __read_string(self, s):
+        data = []
+        while True:
+            line = s.readline()
+            if not line or line.strip() == 'END': break
+            data.append(line)
+        return '\n'.join(data)
