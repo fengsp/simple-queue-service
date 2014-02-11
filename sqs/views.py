@@ -1,42 +1,41 @@
 # -*- coding: utf-8 -*-
 """
-    sqs.app
-    ~~~~~~~
+    sqs.views
+    ~~~~~~~~~
 
-    Simple Queue Service app.
+    Register actions.
 
     :copyright: (c) 2014 by fsp.
     :license: BSD.
 """
-from flask import Flask
-
+from sqs import app
 from .client import Kestrel
 
 
-app = Flask(__name__)
+queue = Kestrel(app)
 
 
-@app.route('/', methods=["GET"]):
+@app.route('/', methods=["GET"])
 def get():
     return 'GET'
 
 
-@app.route('/', methods=["POST"]):
+@app.route('/', methods=["POST"])
 def put():
     return 'PUT'
 
 
-@app.route('/', methods=["DELETE"]):
+@app.route('/', methods=["DELETE"])
 def delete():
     return 'DELETE'
 
 
-@app.route('/m', methods=["GET"]):
+@app.route('/m', methods=["GET"])
 def m_get():
     return 'mGET'
 
 
-@app.route('/m', methods=["POST"]):
+@app.route('/m', methods=["POST"])
 def m_put():
     return 'mPUT'
 
