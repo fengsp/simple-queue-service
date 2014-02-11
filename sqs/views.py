@@ -8,21 +8,30 @@
     :copyright: (c) 2014 by fsp.
     :license: BSD.
 """
+from flask import request
+
 from sqs import app
 from .client import Kestrel
 
 
-queue = Kestrel(app)
+kestrel = Kestrel(app)
+queue = kestrel.queue
 
 
 @app.route('/', methods=["GET"])
 def get():
-    return 'GET'
+    msg = queue.get('default')
+    if msg is not None:
+        return msg
+    else:
+        return 'nothing inside'
 
 
 @app.route('/', methods=["POST"])
 def put():
-    return 'PUT'
+    msg = str(request.form['message'])
+    queue.put('default', msg)
+    return ''
 
 
 @app.route('/', methods=["DELETE"])

@@ -21,8 +21,9 @@ class Kestrel(object):
     
         from flask import Flask
         app = Flask(__name__)
-        queue = Kestrel(app)
-    
+        kestrel = Kestrel(app)
+        queue = kestrel.queue
+
     :param app: the Flask app object
     """
     def __init__(self, app):
@@ -31,6 +32,7 @@ class Kestrel(object):
         :param app: The Flask app.
         """
         self.app = app
+        self.kestrel = None
         self.init_app(app)
     
     def init_app(self, app):
@@ -55,7 +57,11 @@ class Kestrel(object):
                 client.close()
         app.teardown_appcontext(close_kestrel)
         
-        return kestrel
+        self.kestrel = kestrel
+    
+    @property
+    def queue(self):
+        return self.kestrel
 
 
 class KestrelClient(object):
@@ -72,7 +78,7 @@ class KestrelClient(object):
 
         :param servers: A list of the kestrel servers.
         """
-        self.servers = servers if servers else DEFAULT_SERVERS
+        self.servers = servers if servers else self.DEFAULT_SERVERS
         self.connect()
 
     def connect(self):
@@ -97,10 +103,12 @@ class KestrelClient(object):
         """Put a msg into the specific queue.
 
         :param queue: The queue you want to enqueue
-        :param data: The msg
+        :param data: The msg (just support string type)
         :param expire: The expiration time of the msg
         :return: `True` or `False`
         """
+        if not isinstance(data, str):
+            raise TypeError('data must be of string type')
         if expire is None:
             expire = 0
 
@@ -113,7 +121,7 @@ class KestrelClient(object):
     def delete(self, queue):
         """Delete the specific queue from the kestrel server
 
-        :return `True` or `False`
+        :return: `True` or `False`
         """
         ret = self.__memcache.delete(queue)
         if ret == 0:
@@ -253,7 +261,7 @@ class KestrelClient(object):
         return True
 
 
-class KestrelMemcacheCilent(memcache.Client):
+class KestrelMemcacheClient(memcache.Client):
     """Kestrel Memcache Client.
 
     Adding commands: RELOAD, FLUSH, DUMP_STATS, SHUTDOWN, VERSION
