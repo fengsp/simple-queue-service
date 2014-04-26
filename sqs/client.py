@@ -22,18 +22,22 @@ class Kestrel(object):
         from flask import Flask
         app = Flask(__name__)
         kestrel = Kestrel(app)
-        queue = kestrel.queue
+
+        @app.get('/')
+        def index():
+            queue = kestrel.queue
+            // queue logic here
 
     :param app: the Flask app object
     """
-    def __init__(self, app):
+    def __init__(self, app=None):
         """Init the kestrel ext.
 
         :param app: The Flask app.
         """
         self.app = app
-        self.kestrel = None
-        self.init_app(app)
+        if app is not None:
+            self.init_app(app)
     
     def init_app(self, app):
         """Set up this instance for use with *app*"""
@@ -41,14 +45,6 @@ class Kestrel(object):
         if not hasattr(app, 'extensions'):
             app.extensions = {}
         app.extensions['kestrel'] = self
-        
-        def get_kestrel():
-            client = getattr(g, '_kestrel_queue', None)
-            if client is None:
-                client = g._kestrel_queue = \
-                         KestrelClient(app.config['KESTREL_SERVERS'])
-            return client
-        kestrel = LocalProxy(get_kestrel)
 
         def close_kestrel(exception):
             client = getattr(g, '_kestrel_queue', None)
@@ -56,18 +52,18 @@ class Kestrel(object):
                 g._kestrel_queue = None
                 client.close()
         app.teardown_appcontext(close_kestrel)
-        
-        self.kestrel = kestrel
     
     @property
     def queue(self):
-        return self.kestrel
+        client = getattr(g, '_kestrel_queue', None)
+        if client is None:
+            client = g._kestrel_queue = \
+                     KestrelClient(current_app.config['KESTREL_SERVERS'])
+        return client
 
 
 class KestrelClient(object):
     """This is one Kestrel client. 
-
-    :param app: the Flask app object
     """
 
     #: default servers to connect to

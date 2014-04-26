@@ -15,12 +15,11 @@ from .client import Kestrel
 
 
 kestrel = Kestrel(app)
-queue = kestrel.queue
 
 
 @app.route('/', methods=["GET"])
 def get():
-    msg = queue.get('default')
+    msg = kestrel.queue.get('default')
     if msg is not None:
         return msg
     else:
@@ -30,7 +29,7 @@ def get():
 @app.route('/', methods=["POST"])
 def put():
     msg = str(request.form['message'])
-    queue.put('default', msg)
+    kestrel.queue.put('default', msg)
     return ''
 
 
